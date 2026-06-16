@@ -42,13 +42,21 @@ class EcgAnalysis:
 
 
 def analyze(signal_mv: np.ndarray,
-            sampling_rate: int = SAMPLING_RATE_HZ) -> EcgAnalysis:
+            sampling_rate: int = SAMPLING_RATE_HZ,
+            correct_artifacts: bool = True) -> EcgAnalysis:
     """
     Analyse complète d'une dérivation ECG.
 
     Args:
         signal_mv: signal d'UNE dérivation en mV (idéalement Lead II).
         sampling_rate: 300 Hz pour le 6L.
+        correct_artifacts: si True (défaut), applique la correction d'artéfacts
+            R-R de NeuroKit2 (méthode Lipponen-Tarvainen/Kubios). Elle retire les
+            pics aberrants — y compris un faux pic de faible amplitude éloigné de
+            ses voisins, qu'un simple garde de période réfractaire ne verrait pas.
+            ⚠️ Cette correction peut aussi lisser de VRAIES extrasystoles (ESV).
+            Passe False pour inspecter les pics bruts (utile en cas d'arythmie
+            suspectée — à confirmer par un médecin sur l'ECG d'origine).
 
     Returns:
         EcgAnalysis.
@@ -60,8 +68,9 @@ def analyze(signal_mv: np.ndarray,
     # 1) Nettoyage (filtrage passe-bande adapté ECG + retrait dérive de base).
     cleaned = nk.ecg_clean(signal_mv, sampling_rate=sampling_rate)
 
-    # 2) Détection des pics R.
-    _, rpeaks_info = nk.ecg_peaks(cleaned, sampling_rate=sampling_rate)
+    # 2) Détection des pics R, avec correction d'artéfacts R-R optionnelle.
+    _, rpeaks_info = nk.ecg_peaks(cleaned, sampling_rate=sampling_rate,
+                                  correct_artifacts=correct_artifacts)
     rpeaks_idx = np.asarray(rpeaks_info["ECG_R_Peaks"], dtype=int)
 
     # 3) Intervalles R-R (ms) et FC moyenne.

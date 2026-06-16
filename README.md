@@ -108,6 +108,9 @@ python -m kardia6l.pipeline --simulate --plot
 
 # Avec un vrai enregistrement :
 python -m kardia6l.pipeline --atc data/mon_ecg.atc --plot --export-csv
+
+# Pics R bruts, sans correction d'artéfacts R-R (si arythmie suspectée) :
+python -m kardia6l.pipeline --atc data/mon_ecg.atc --raw-peaks
 ```
 
 ---
@@ -122,7 +125,11 @@ Cherche les marqueurs `# TODO(code):` dans les sources. Les principaux :
    bloc `ann ` (annotations), variantes de version < 4. Le repli `pyATC` reste
    disponible (`--prefer-pyatc`).
 2. **`analysis.py`** — la HRV est branchée sur `nk.hrv()` (time + frequency).
-   À étendre : métriques non linéaires (Poincaré, entropie), fenêtrage glissant.
+   Correction d'artéfacts R-R (Lipponen-Tarvainen) activée par défaut : retire
+   les pics aberrants (un faux pic de faible amplitude, p. ex.) qu'un garde de
+   période réfractaire ne verrait pas. Désactivable via `--raw-peaks`. ⚠️ Peut
+   lisser de vraies extrasystoles. À étendre : métriques non linéaires (Poincaré,
+   entropie), fenêtrage glissant.
 3. **`leads.py`** — la reconstruction suppose pouce/pouce/jambe. Note l'avertissement
    sur l'axe (contacts pouces ≠ poignets/chevilles standard) si tu interprètes l'axe.
 4. **BLE temps réel** (hors scope ici) — si un jour tu veux le streaming live,

@@ -31,6 +31,7 @@ from . import plotting
 def run(recording: AtcRecording,
         do_plot: bool = False,
         export_csv: bool = False,
+        correct_artifacts: bool = True,
         out_dir: str = "output") -> dict:
     """Exécute le pipeline complet sur un AtcRecording. Renvoie un dict de résultats."""
     os.makedirs(out_dir, exist_ok=True)
@@ -48,7 +49,8 @@ def run(recording: AtcRecording,
     # 2) Analyse rythmique sur la meilleure dérivation disponible
     #    (Lead II de préférence : QRS le plus net).
     analysis_lead = "II" if "II" in leads else next(iter(leads))
-    result = analyze(leads[analysis_lead], sampling_rate=recording.sampling_rate)
+    result = analyze(leads[analysis_lead], sampling_rate=recording.sampling_rate,
+                     correct_artifacts=correct_artifacts)
     print(f"Durée : {recording.duration_s:.1f} s @ {recording.sampling_rate} Hz "
           f"| {len(leads)} dérivation(s) | analyse sur Lead {analysis_lead}")
     print(result.summary())
@@ -100,6 +102,9 @@ def main(argv: list[str] | None = None) -> None:
                         help="générer les figures PNG")
     parser.add_argument("--export-csv", action="store_true",
                         help="exporter les 6 dérivations en CSV")
+    parser.add_argument("--raw-peaks", action="store_true",
+                        help="désactiver la correction d'artéfacts R-R "
+                             "(pics bruts — utile si arythmie suspectée)")
     parser.add_argument("--out-dir", default="output",
                         help="dossier de sortie (défaut: output/)")
     parser.add_argument("--duration", type=int, default=30,
@@ -116,7 +121,7 @@ def main(argv: list[str] | None = None) -> None:
         recording = read_atc(args.atc, prefer_pyatc=args.prefer_pyatc)
 
     run(recording, do_plot=args.plot, export_csv=args.export_csv,
-        out_dir=args.out_dir)
+        correct_artifacts=not args.raw_peaks, out_dir=args.out_dir)
 
 
 if __name__ == "__main__":
