@@ -12,11 +12,26 @@ sur l'ECG d'origine.
 
 from __future__ import annotations
 
+import warnings
+from contextlib import contextmanager
 from dataclasses import dataclass
 
 import numpy as np
 
 from . import SAMPLING_RATE_HZ
+
+
+@contextmanager
+def _quiet_neurokit():
+    """Tait les avertissements attendus de NeuroKit2 sur les signaux courts.
+
+    Sur 30 s, l'entropie multi-échelle et la DFA long terme manquent de
+    données → RuntimeWarning (division) et NeuroKitWarning bénins. On les
+    masque uniquement autour des appels NeuroKit, sans toucher au reste.
+    """
+    with warnings.catch_warnings(), np.errstate(all="ignore"):
+        warnings.simplefilter("ignore")
+        yield
 
 
 @dataclass
@@ -86,7 +101,8 @@ def analyze(signal_mv: np.ndarray,
     hrv_metrics: dict = {}
     if rpeaks_idx.size >= 4:
         try:
-            hrv_df = nk.hrv(rpeaks_idx, sampling_rate=sampling_rate, show=False)
+            with _quiet_neurokit():
+                hrv_df = nk.hrv(rpeaks_idx, sampling_rate=sampling_rate, show=False)
             hrv_metrics = hrv_df.iloc[0].to_dict()
         except Exception as exc:  # robustesse : la HRV échoue sur signaux courts
             hrv_metrics = {"error": str(exc)}
@@ -128,8 +144,9 @@ def compute_intervals(cleaned: np.ndarray,
         return float(np.median(diff)) / sampling_rate * 1000.0
 
     try:
-        _, waves = nk.ecg_delineate(cleaned, rpeaks_idx,
-                                    sampling_rate=sampling_rate, method="dwt")
+        with _quiet_neurokit():
+            _, waves = nk.ecg_delineate(cleaned, rpeaks_idx,
+                                        sampling_rate=sampling_rate, method="dwt")
     except Exception as exc:
         return {"error": str(exc)}
 
@@ -203,7 +220,8 @@ def signal_quality(cleaned: np.ndarray,
     """Indice de qualité moyen du signal (0–1) selon NeuroKit2. NaN si indispo."""
     import neurokit2 as nk
     try:
-        quality = nk.ecg_quality(cleaned, sampling_rate=sampling_rate)
+        with _quiet_neurokit():
+            quality = nk.ecg_quality(cleaned, sampling_rate=sampling_rate)
         return float(np.nanmean(np.asarray(quality, dtype=float)))
     except Exception:
         return float("nan")
