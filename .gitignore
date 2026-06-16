@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+
+# Données de santé personnelles — JAMAIS versionnées.
+/data/**
+!/data/.keep
+
+# Sorties générées (tracés/CSV dérivés des ECG) — données de santé, non versionnées.
+/output/**
+!/output/.keep
