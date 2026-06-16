@@ -3,6 +3,11 @@ __pycache__/
 .venv/
 .pytest_cache/
 
+# Artefacts de build/packaging
+*.egg-info/
+build/
+dist/
+
 # Données de santé personnelles — JAMAIS versionnées.
 /data/**
 !/data/.keep

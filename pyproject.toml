@@ -1,3 +1,48 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kardia6l"
+description = "Pipeline de traitement de signal ECG pour AliveCor KardiaMobile 6L (lecture .atc, dérivations, R-peaks/FC/HRV, rapports). Non diagnostique."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "rsilvestre" }]
+keywords = ["ecg", "kardiamobile", "alivecor", "hrv", "signal-processing", "atc"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+]
+dynamic = ["version"]
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "matplotlib>=3.7",
+    "neurokit2>=0.2.7",
+    "pandas>=2.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.urls]
+Homepage = "https://github.com/rsilvestre/kardia6l"
+Repository = "https://github.com/rsilvestre/kardia6l"
+
+[project.scripts]
+kardia6l = "kardia6l.pipeline:main"
+kardia6l-batch = "kardia6l.batch:main"
+
+[tool.setuptools]
+packages = ["kardia6l"]
+
+[tool.setuptools.dynamic]
+version = { attr = "kardia6l.__version__" }
+
 [tool.pytest.ini_options]
 # Permet `import kardia6l` depuis les tests sans installation du paquet.
 pythonpath = ["."]
