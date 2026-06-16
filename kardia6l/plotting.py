@@ -69,15 +69,17 @@ def plot_six_leads(leads: dict[str, np.ndarray],
                 ax.plot(rpeaks_idx / sampling_rate, sig[rpeaks_idx],
                         "v", color="#1565c0", markersize=5, label="R (détecté)")
                 has_markers = True
-            # Battements annotés par l'appareil : triangle creux vert.
-            # Là où les deux coïncident, les marqueurs se superposent ; un
-            # marqueur isolé signale un battement vu par un seul des deux.
+            # Battements annotés par l'appareil : fines barres verticales en bas
+            # de l'axe. Sous chaque pic R détecté → concordance ; une barre
+            # isolée (sans triangle) = battement vu seulement par l'appareil.
             if device_beats_idx is not None and len(device_beats_idx):
                 dev = np.asarray(device_beats_idx, dtype=int)
                 dev = dev[(dev >= 0) & (dev < len(sig))]
-                ax.plot(dev / sampling_rate, sig[dev], "^", color="#2e7d32",
-                        markersize=7, markerfacecolor="none",
-                        label="appareil (ann)")
+                # Transform : x en coordonnées de données, y en fraction d'axe.
+                ax.vlines(dev / sampling_rate, 0.0, 0.08,
+                          transform=ax.get_xaxis_transform(),
+                          color="#2e7d32", alpha=0.6, linewidth=1.0,
+                          label="appareil (ann)")
                 has_markers = True
             if has_markers:
                 ax.legend(loc="upper right", fontsize=8, ncol=2)
