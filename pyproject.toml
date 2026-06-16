@@ -1,0 +1,5 @@
+[tool.pytest.ini_options]
+# Permet `import kardia6l` depuis les tests sans installation du paquet.
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-q"

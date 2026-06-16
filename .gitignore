@@ -1,6 +1,7 @@
 __pycache__/
 *.pyc
 .venv/
+.pytest_cache/
 
 # Données de santé personnelles — JAMAIS versionnées.
 /data/**

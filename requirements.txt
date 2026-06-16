@@ -7,6 +7,9 @@ matplotlib>=3.7
 neurokit2>=0.2.7
 pandas>=2.0          # dépendance de neurokit2, listée explicitement
 
+# Tests
+pytest>=8.0
+
 # Parsing .atc — repli optionnel sur l'implémentation tierce.
 # L'implémentation maison dans atc_reader.py fonctionne sans, mais pyATC
 # couvre davantage de variantes de format.

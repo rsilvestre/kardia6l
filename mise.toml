@@ -23,6 +23,10 @@ run = "python -m kardia6l.batch"
 description = "Re-analyser TOUS les .atc (écrase les sorties existantes)"
 run = "python -m kardia6l.batch --force"
 
+[tasks.test]
+description = "Lancer la suite de tests (pytest)"
+run = "pytest"
+
 [tasks.clean]
 description = "Supprimer les sorties générées (output/)"
 run = "find output -mindepth 1 ! -name .keep -delete"
