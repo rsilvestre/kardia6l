@@ -1,0 +1,28 @@
+# mise-en-place — environnement & tâches du projet kardia6l.
+# Doc : https://mise.jdx.dev
+#
+#   mise run setup     → créer le venv et installer les dépendances
+#   mise run analyze   → analyser les NOUVEAUX .atc de data/ (idempotent)
+#   mise run all       → tout retraiter (écrase output/)
+#   mise run clean     → vider output/
+
+[env]
+# Active automatiquement le venv du projet quand on entre dans le dossier
+# (réutilise le .venv existant ; le crée avec le python système si absent).
+_.python.venv = { path = ".venv", create = true }
+
+[tasks.setup]
+description = "Créer le venv et installer les dépendances"
+run = "pip install --upgrade pip && pip install -r requirements.txt"
+
+[tasks.analyze]
+description = "Analyser les nouveaux .atc de data/ → output/<nom>/"
+run = "python -m kardia6l.batch"
+
+[tasks.all]
+description = "Re-analyser TOUS les .atc (écrase les sorties existantes)"
+run = "python -m kardia6l.batch --force"
+
+[tasks.clean]
+description = "Supprimer les sorties générées (output/)"
+run = "find output -mindepth 1 ! -name .keep -delete"
