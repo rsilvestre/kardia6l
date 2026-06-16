@@ -18,6 +18,7 @@ def plot_six_leads(leads: dict[str, np.ndarray],
                    sampling_rate: int = SAMPLING_RATE_HZ,
                    rpeaks_idx: np.ndarray | None = None,
                    rpeaks_lead: str = "II",
+                   device_beats_idx: np.ndarray | None = None,
                    out_path: str = "output/ecg_6leads.png",
                    title: str = "KardiaMobile 6L — dérivations") -> str:
     """Trace les dérivations disponibles, empilées. Renvoie le chemin du PNG.
@@ -61,10 +62,25 @@ def plot_six_leads(leads: dict[str, np.ndarray],
         ax.set_ylabel(name, rotation=0, ha="right", va="center",
                       fontweight="bold")
         ax.margins(x=0)
-        if rpeaks_idx is not None and name == rpeaks_lead:
-            ax.plot(rpeaks_idx / sampling_rate, sig[rpeaks_idx],
-                    "v", color="#1565c0", markersize=5, label="R")
-            ax.legend(loc="upper right", fontsize=8)
+        if name == rpeaks_lead:
+            has_markers = False
+            # Nos pics R détectés : triangle plein bleu.
+            if rpeaks_idx is not None and len(rpeaks_idx):
+                ax.plot(rpeaks_idx / sampling_rate, sig[rpeaks_idx],
+                        "v", color="#1565c0", markersize=5, label="R (détecté)")
+                has_markers = True
+            # Battements annotés par l'appareil : triangle creux vert.
+            # Là où les deux coïncident, les marqueurs se superposent ; un
+            # marqueur isolé signale un battement vu par un seul des deux.
+            if device_beats_idx is not None and len(device_beats_idx):
+                dev = np.asarray(device_beats_idx, dtype=int)
+                dev = dev[(dev >= 0) & (dev < len(sig))]
+                ax.plot(dev / sampling_rate, sig[dev], "^", color="#2e7d32",
+                        markersize=7, markerfacecolor="none",
+                        label="appareil (ann)")
+                has_markers = True
+            if has_markers:
+                ax.legend(loc="upper right", fontsize=8, ncol=2)
 
     axes[-1].set_xlabel("Temps (s)")
     fig.tight_layout(rect=(0, 0, 1, 0.98))

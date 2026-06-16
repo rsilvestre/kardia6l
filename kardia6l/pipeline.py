@@ -64,6 +64,7 @@ def run(recording: AtcRecording,
         p1 = plotting.plot_six_leads(
             leads, sampling_rate=recording.sampling_rate,
             rpeaks_idx=result.rpeaks_idx, rpeaks_lead=analysis_lead,
+            device_beats_idx=recording.device_beats,
             out_path=os.path.join(out_dir, "ecg_6leads.png"),
         )
         p2 = plotting.plot_rr_tachogram(
