@@ -101,3 +101,61 @@ def analyze(signal_mv: np.ndarray,
         cleaned=cleaned,
         sampling_rate=sampling_rate,
     )
+
+
+def compute_intervals(cleaned: np.ndarray,
+                      rpeaks_idx: np.ndarray,
+                      sampling_rate: int = SAMPLING_RATE_HZ) -> dict:
+    """
+    Délimitation P-QRS-T → intervalles médians (ms) : durée QRS, PR, QT, QTc.
+
+    Best-effort : la délimitation peut échouer sur un signal court/bruité.
+    QTc selon Bazett (QT / √RR). Toute valeur reste exploratoire, NON diagnostique.
+    """
+    if rpeaks_idx.size < 3:
+        return {}
+    import neurokit2 as nk
+
+    def _median_ms(a_idx, b_idx) -> float:
+        """médiane de (a − b) en ms, en ignorant les NaN appariés."""
+        a = np.asarray(a_idx, dtype=float)
+        b = np.asarray(b_idx, dtype=float)
+        n = min(a.size, b.size)
+        diff = a[:n] - b[:n]
+        diff = diff[np.isfinite(diff) & (diff > 0)]
+        if diff.size == 0:
+            return float("nan")
+        return float(np.median(diff)) / sampling_rate * 1000.0
+
+    try:
+        _, waves = nk.ecg_delineate(cleaned, rpeaks_idx,
+                                    sampling_rate=sampling_rate, method="dwt")
+    except Exception as exc:
+        return {"error": str(exc)}
+
+    qrs_ms = _median_ms(waves.get("ECG_R_Offsets", []),
+                        waves.get("ECG_R_Onsets", []))
+    pr_ms = _median_ms(waves.get("ECG_R_Onsets", []),
+                       waves.get("ECG_P_Onsets", []))
+    qt_ms = _median_ms(waves.get("ECG_T_Offsets", []),
+                       waves.get("ECG_R_Onsets", []))
+
+    intervals = {"QRS_ms": qrs_ms, "PR_ms": pr_ms, "QT_ms": qt_ms}
+
+    # QTc de Bazett : QT(s) / √(RR(s)) → exprimé en ms.
+    if np.isfinite(qt_ms) and rpeaks_idx.size >= 2:
+        rr_s = float(np.median(np.diff(rpeaks_idx))) / sampling_rate
+        if rr_s > 0:
+            intervals["QTc_Bazett_ms"] = qt_ms / np.sqrt(rr_s)
+    return intervals
+
+
+def signal_quality(cleaned: np.ndarray,
+                   sampling_rate: int = SAMPLING_RATE_HZ) -> float:
+    """Indice de qualité moyen du signal (0–1) selon NeuroKit2. NaN si indispo."""
+    import neurokit2 as nk
+    try:
+        quality = nk.ecg_quality(cleaned, sampling_rate=sampling_rate)
+        return float(np.nanmean(np.asarray(quality, dtype=float)))
+    except Exception:
+        return float("nan")

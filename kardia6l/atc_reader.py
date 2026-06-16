@@ -85,6 +85,29 @@ def _samples_from_ecg_body(body: bytes) -> np.ndarray:
     return np.frombuffer(body, dtype="<i2").astype(np.float64)
 
 
+def _parse_info(body: bytes) -> dict:
+    """Décode le bloc info : 6 chaînes terminées par \\x00, ordre constant.
+
+    [0] horodatage ISO 8601   [1] UUID d'enregistrement   [2] téléphone/OS
+    [3] version de l'app      [4] matériel/firmware        [5] "SN=…,BAT=…"
+    """
+    strings = [p.decode("ascii", "replace")
+               for p in body.split(b"\x00") if p]
+    labels = ["recorded_at", "record_uuid", "phone_os",
+              "app_version", "device_fw", "serial_battery"]
+    info = dict(zip(labels, strings))
+    info["info_strings"] = strings  # liste brute, au cas où l'ordre changerait
+
+    # "SN=XXXXXXXXXXXXX,BAT=96" → serial + niveau de batterie.
+    sn_bat = info.get("serial_battery", "")
+    for token in sn_bat.split(","):
+        if token.startswith("SN="):
+            info["serial_number"] = token[3:]
+        elif token.startswith("BAT="):
+            info["battery_pct"] = token[4:]
+    return info
+
+
 def _parse_atc_standalone(path: str) -> AtcRecording:
     with open(path, "rb") as fh:
         buf = fh.read()
@@ -100,7 +123,8 @@ def _parse_atc_standalone(path: str) -> AtcRecording:
     sampling_rate = SAMPLING_RATE_HZ
     uv_per_lsb = 0.5                       # défaut plausible (500 nV/LSB)
     amplitude_nv = 500.0
-    info_text = ""
+    info: dict = {}
+    n_annotations = 0
     ecg_bodies: dict[bytes, np.ndarray] = {}
 
     for chunk_id, body in _iter_chunks(buf, _HEADER_LEN):
@@ -117,7 +141,10 @@ def _parse_atc_standalone(path: str) -> AtcRecording:
         elif chunk_id in _ECG_TAGS:
             ecg_bodies[chunk_id] = _samples_from_ecg_body(body)
         elif chunk_id == b"info":
-            info_text = body.split(b"\x00", 1)[0].decode("ascii", "replace")
+            info = _parse_info(body)
+        elif chunk_id == b"ann ":
+            # En-tête 4 octets + enregistrements de 6 octets (pos uint32 + type uint16).
+            n_annotations = max(0, (len(body) - 4) // 6)
 
     if not ecg_bodies:
         raise ValueError(
@@ -133,16 +160,18 @@ def _parse_atc_standalone(path: str) -> AtcRecording:
         if tag in ecg_bodies
     }
 
+    metadata = {
+        "atc_version": version,
+        "n_channels": len(leads),
+        "amplitude_nv_per_lsb": amplitude_nv,
+        "n_device_annotations": n_annotations,
+        **info,
+    }
     return AtcRecording(
         leads=leads,
         sampling_rate=sampling_rate,
         uv_per_lsb=uv_per_lsb,
-        metadata={
-            "atc_version": version,
-            "n_channels": len(leads),
-            "info": info_text,
-            "amplitude_nv_per_lsb": amplitude_nv,
-        },
+        metadata=metadata,
     )
 
 

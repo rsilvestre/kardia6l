@@ -32,6 +32,8 @@ def run(recording: AtcRecording,
         do_plot: bool = False,
         export_csv: bool = False,
         correct_artifacts: bool = True,
+        source_name: str = "ecg",
+        write_report: bool = True,
         out_dir: str = "output") -> dict:
     """Exécute le pipeline complet sur un AtcRecording. Renvoie un dict de résultats."""
     os.makedirs(out_dir, exist_ok=True)
@@ -83,6 +85,17 @@ def run(recording: AtcRecording,
         outputs["csv"] = csv_path
         print("CSV :", csv_path)
 
+    # 5) Rapport Markdown complet (métadonnées + toutes les analyses).
+    if write_report:
+        from .report import write_report as _write_report
+        report_path = _write_report(
+            recording, result, leads, source_name=source_name,
+            analysis_lead=analysis_lead, correct_artifacts=correct_artifacts,
+            out_path=os.path.join(out_dir, "report.md"),
+        )
+        outputs["report"] = report_path
+        print("Rapport :", report_path)
+
     return outputs
 
 
@@ -117,11 +130,14 @@ def main(argv: list[str] | None = None) -> None:
         from .simulate import simulate_recording
         recording = simulate_recording(duration_s=args.duration,
                                         heart_rate=args.hr)
+        source_name = "simulate"
     else:
         recording = read_atc(args.atc, prefer_pyatc=args.prefer_pyatc)
+        source_name = os.path.splitext(os.path.basename(args.atc))[0]
 
     run(recording, do_plot=args.plot, export_csv=args.export_csv,
-        correct_artifacts=not args.raw_peaks, out_dir=args.out_dir)
+        correct_artifacts=not args.raw_peaks, source_name=source_name,
+        out_dir=args.out_dir)
 
 
 if __name__ == "__main__":

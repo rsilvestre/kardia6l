@@ -82,8 +82,27 @@ kardia6l/
     ├── analysis.py            ← R-peaks, FC, R-R, HRV (NeuroKit2)
     ├── plotting.py            ← tracés 6 dérivations + tachogramme R-R
     ├── simulate.py            ← générateur de signal de test (sans .atc)
+    ├── report.py              ← rapport Markdown complet (métadonnées + analyses)
+    ├── batch.py               ← traitement par lot de data/*.atc (idempotent)
     └── pipeline.py            ← orchestration de bout en bout + CLI
 ```
+
+### Traitement par lot (mise-en-place)
+`mise.toml` expose des tâches qui réutilisent le `.venv` du projet :
+
+```bash
+mise run setup     # créer le venv + installer les dépendances
+mise run analyze   # analyser les NOUVEAUX .atc de data/ (idempotent)
+mise run all       # tout retraiter (--force)
+mise run clean     # vider output/
+```
+
+Chaque enregistrement produit un dossier **nommé par sa date**
+(`output/2026-06-15_22-46-57/`) contenant : `ecg_6leads.png`, `rr_tachogram.png`,
+`ecg_leads.csv` et **`report.md`** — un rapport complet (id d'origine, UUID,
+appareil/firmware/série/batterie, propriétés du signal, rythme, intervalles
+P-QRS-T, HRV temporelle/fréquentielle/non linéaire). ⚠️ `data/` et `output/`
+contiennent des **données de santé** : exclus du suivi Git.
 
 ### Flux
 ```
