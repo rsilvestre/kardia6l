@@ -1,5 +1,6 @@
 # kardia6l — Pipeline d'analyse du signal ECG du KardiaMobile 6L
 
+[![tests](https://github.com/rsilvestre/kardia6l/actions/workflows/tests.yml/badge.svg)](https://github.com/rsilvestre/kardia6l/actions/workflows/tests.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/Python-3.12%2B-blue.svg)
 ![HRV: NeuroKit2](https://img.shields.io/badge/HRV-NeuroKit2-orange.svg)
