@@ -100,9 +100,10 @@ mise run clean     # vider output/
 Chaque enregistrement produit un dossier **nommé par sa date**
 (`output/2026-06-15_22-46-57/`) contenant : `ecg_6leads.png`, `rr_tachogram.png`,
 `ecg_leads.csv` et **`report.md`** — un rapport complet (id d'origine, UUID,
-appareil/firmware/série/batterie, propriétés du signal, rythme, intervalles
-P-QRS-T, HRV temporelle/fréquentielle/non linéaire). ⚠️ `data/` et `output/`
-contiennent des **données de santé** : exclus du suivi Git.
+appareil/firmware/série/batterie, propriétés du signal, rythme, **recoupement
+de nos pics R avec les battements annotés par l'appareil** (bloc `ann `),
+intervalles P-QRS-T, HRV temporelle/fréquentielle/non linéaire). ⚠️ `data/` et
+`output/` contiennent des **données de santé** : exclus du suivi Git.
 
 ### Flux
 ```

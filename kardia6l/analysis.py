@@ -150,6 +150,54 @@ def compute_intervals(cleaned: np.ndarray,
     return intervals
 
 
+def crosscheck_device_beats(detected_idx: np.ndarray,
+                            device_idx: np.ndarray,
+                            sampling_rate: int = SAMPLING_RATE_HZ,
+                            tolerance_ms: float = 60.0) -> dict:
+    """
+    Recoupe nos pics R détectés avec les battements annotés par l'appareil.
+
+    Apparie chaque battement appareil au pic détecté le plus proche dans une
+    fenêtre de ±`tolerance_ms`. Renvoie le nombre d'appariements, les battements
+    vus seulement par l'appareil (qu'on a manqués), ceux vus seulement par nous
+    (détections en trop), et l'écart temporel médian/max des paires.
+
+    Args:
+        detected_idx: indices d'échantillon de NOS pics R.
+        device_idx: indices d'échantillon des battements de l'appareil.
+        tolerance_ms: fenêtre d'appariement (défaut 60 ms).
+    """
+    detected = np.sort(np.asarray(detected_idx, dtype=int))
+    device = np.sort(np.asarray(device_idx, dtype=int))
+    tol = tolerance_ms / 1000.0 * sampling_rate  # ms → échantillons
+
+    matched_offsets: list[float] = []
+    used = np.zeros(detected.size, dtype=bool)
+    device_only = 0
+    for pos in device:
+        if detected.size == 0:
+            device_only += 1
+            continue
+        nearest = int(np.argmin(np.abs(detected - pos)))
+        if not used[nearest] and abs(detected[nearest] - pos) <= tol:
+            used[nearest] = True
+            matched_offsets.append((detected[nearest] - pos) / sampling_rate * 1000.0)
+        else:
+            device_only += 1
+
+    offsets = np.asarray(matched_offsets)
+    return {
+        "n_detected": int(detected.size),
+        "n_device": int(device.size),
+        "matched": int(offsets.size),
+        "device_only": int(device_only),          # battements manqués par nous
+        "detected_only": int((~used).sum()),       # nos détections en trop
+        "tolerance_ms": tolerance_ms,
+        "median_offset_ms": float(np.median(offsets)) if offsets.size else float("nan"),
+        "max_abs_offset_ms": float(np.max(np.abs(offsets))) if offsets.size else float("nan"),
+    }
+
+
 def signal_quality(cleaned: np.ndarray,
                    sampling_rate: int = SAMPLING_RATE_HZ) -> float:
     """Indice de qualité moyen du signal (0–1) selon NeuroKit2. NaN si indispo."""

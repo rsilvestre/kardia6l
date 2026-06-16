@@ -15,7 +15,8 @@ from __future__ import annotations
 import numpy as np
 
 from .leads import LEAD_ORDER
-from .analysis import EcgAnalysis, compute_intervals, signal_quality
+from .analysis import (EcgAnalysis, compute_intervals, signal_quality,
+                       crosscheck_device_beats)
 
 # Sous-ensembles HRV mis en avant (le reste va dans l'annexe).
 _HRV_TIME = ["HRV_MeanNN", "HRV_SDNN", "HRV_RMSSD", "HRV_SDSD",
@@ -142,8 +143,44 @@ def build_report(recording, result: EcgAnalysis, leads: dict,
     add(_table(rhythm))
     add("")
 
-    # --- 4. Intervalles P-QRS-T -------------------------------------------
-    add("## 4. Intervalles P-QRS-T (délimitation, best-effort)")
+    # --- 3bis. Recoupement avec les annotations de l'appareil -------------
+    add("## 4. Recoupement avec les annotations de l'appareil")
+    if recording.device_beats is not None and recording.device_beats.size:
+        check = crosscheck_device_beats(result.rpeaks_idx,
+                                        recording.device_beats, fs)
+        add(_table([
+            ("Pics R détectés (nous)", _fmt(check["n_detected"])),
+            ("Battements annotés (appareil)", _fmt(check["n_device"])),
+            (f"Appariés (±{check['tolerance_ms']:.0f} ms)", _fmt(check["matched"])),
+            ("Manqués par nous (appareil seul)", _fmt(check["device_only"])),
+            ("Détections en trop (nous seul)", _fmt(check["detected_only"])),
+            ("Écart temporel médian (ms)", _fmt(check["median_offset_ms"])),
+            ("Écart absolu max (ms)", _fmt(check["max_abs_offset_ms"])),
+        ]))
+        add("")
+        notes = []
+        if check["detected_only"] == 0 and check["device_only"] == 0:
+            add("*Concordance totale avec l'appareil.*")
+        else:
+            if check["detected_only"]:
+                notes.append(
+                    f"{check['detected_only']} détection(s) en trop de notre côté "
+                    "— souvent le tout premier battement, que l'appareil omet "
+                    "(pas de R-R préalable pour le valider)")
+            if check["device_only"]:
+                notes.append(
+                    f"{check['device_only']} battement(s) annoté(s) par l'appareil "
+                    "mais pas par nous — typiquement en début/fin de tracé "
+                    "(effets de bord de la détection) ou battements de très faible "
+                    "amplitude")
+            for note in notes:
+                add(f"* {note}.")
+    else:
+        add("Aucune annotation de battement dans le fichier.")
+    add("")
+
+    # --- 5. Intervalles P-QRS-T -------------------------------------------
+    add("## 5. Intervalles P-QRS-T (délimitation, best-effort)")
     intervals = compute_intervals(result.cleaned, result.rpeaks_idx, fs)
     if intervals and "error" not in intervals:
         add(_table([
@@ -162,8 +199,8 @@ def build_report(recording, result: EcgAnalysis, leads: dict,
         add(f"Délimitation indisponible ({reason}).")
     add("")
 
-    # --- 5. HRV -----------------------------------------------------------
-    add("## 5. Variabilité de la fréquence cardiaque (HRV)")
+    # --- 6. HRV -----------------------------------------------------------
+    add("## 6. Variabilité de la fréquence cardiaque (HRV)")
     hrv = result.hrv or {}
     if not hrv or "error" in hrv:
         reason = hrv.get("error", "pics insuffisants") if hrv else "indisponible"

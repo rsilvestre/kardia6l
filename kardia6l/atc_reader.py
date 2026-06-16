@@ -50,6 +50,9 @@ class AtcRecording:
     sampling_rate: int = SAMPLING_RATE_HZ
     uv_per_lsb: float = 0.5               # gain : microvolts par LSB
     metadata: dict = field(default_factory=dict)
+    # Positions (indices d'échantillon) des battements annotés par l'appareil
+    # — issues du bloc ann . None si absent.
+    device_beats: np.ndarray | None = None
 
     @property
     def duration_s(self) -> float:
@@ -124,7 +127,7 @@ def _parse_atc_standalone(path: str) -> AtcRecording:
     uv_per_lsb = 0.5                       # défaut plausible (500 nV/LSB)
     amplitude_nv = 500.0
     info: dict = {}
-    n_annotations = 0
+    device_beats: np.ndarray | None = None
     ecg_bodies: dict[bytes, np.ndarray] = {}
 
     for chunk_id, body in _iter_chunks(buf, _HEADER_LEN):
@@ -143,8 +146,14 @@ def _parse_atc_standalone(path: str) -> AtcRecording:
         elif chunk_id == b"info":
             info = _parse_info(body)
         elif chunk_id == b"ann ":
-            # En-tête 4 octets + enregistrements de 6 octets (pos uint32 + type uint16).
-            n_annotations = max(0, (len(body) - 4) // 6)
+            # En-tête 4 octets, puis enregistrements de 6 octets :
+            # position (uint32, indice d'échantillon) + type (uint16, 1 = battement).
+            n = max(0, (len(body) - 4) // 6)
+            if n:
+                recs = np.frombuffer(body[4:4 + n * 6],
+                                     dtype=np.dtype([("pos", "<u4"),
+                                                     ("type", "<u2")]))
+                device_beats = recs["pos"].astype(int)
 
     if not ecg_bodies:
         raise ValueError(
@@ -164,7 +173,7 @@ def _parse_atc_standalone(path: str) -> AtcRecording:
         "atc_version": version,
         "n_channels": len(leads),
         "amplitude_nv_per_lsb": amplitude_nv,
-        "n_device_annotations": n_annotations,
+        "n_device_annotations": 0 if device_beats is None else int(device_beats.size),
         **info,
     }
     return AtcRecording(
@@ -172,6 +181,7 @@ def _parse_atc_standalone(path: str) -> AtcRecording:
         sampling_rate=sampling_rate,
         uv_per_lsb=uv_per_lsb,
         metadata=metadata,
+        device_beats=device_beats,
     )
 
 
