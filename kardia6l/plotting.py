@@ -14,6 +14,28 @@ from . import SAMPLING_RATE_HZ
 from .leads import LEAD_ORDER
 
 
+def whole_second_formatter():
+    """Formateur d'axe temps : n'étiquette qu'aux secondes entières."""
+    from matplotlib.ticker import FuncFormatter
+    return FuncFormatter(
+        lambda x, _pos: f"{x:.0f}" if abs(x - round(x)) < 1e-6 else ""
+    )
+
+
+def apply_ecg_paper_grid(ax, time_labels: bool = True) -> None:
+    """Applique le quadrillage calibré « papier ECG » (0,2 s × 0,5 mV ;
+    petites cases 0,04 s × 0,1 mV) à un axe matplotlib."""
+    from matplotlib.ticker import MultipleLocator
+    ax.xaxis.set_major_locator(MultipleLocator(0.2))
+    ax.xaxis.set_minor_locator(MultipleLocator(0.04))
+    ax.yaxis.set_major_locator(MultipleLocator(0.5))
+    ax.yaxis.set_minor_locator(MultipleLocator(0.1))
+    if time_labels:
+        ax.xaxis.set_major_formatter(whole_second_formatter())
+    ax.grid(which="major", color="#f4b6b6", linewidth=0.6)
+    ax.grid(which="minor", color="#f9dada", linewidth=0.3)
+
+
 def plot_six_leads(leads: dict[str, np.ndarray],
                    sampling_rate: int = SAMPLING_RATE_HZ,
                    rpeaks_idx: np.ndarray | None = None,
@@ -29,13 +51,6 @@ def plot_six_leads(leads: dict[str, np.ndarray],
     import matplotlib
     matplotlib.use("Agg")  # backend headless
     import matplotlib.pyplot as plt
-    from matplotlib.ticker import MultipleLocator, FuncFormatter
-
-    # Le quadrillage est calibré à 0,2 s, mais on n'étiquette qu'aux secondes
-    # entières (sinon 150 labels illisibles sur un tracé de 30 s).
-    whole_second = FuncFormatter(
-        lambda x, _pos: f"{x:.0f}" if abs(x - round(x)) < 1e-6 else ""
-    )
 
     names = [name for name in LEAD_ORDER if name in leads]
     n = len(names)
@@ -50,15 +65,7 @@ def plot_six_leads(leads: dict[str, np.ndarray],
     for ax, name in zip(axes, names):
         sig = leads[name]
         ax.plot(t, sig, linewidth=0.7, color="#b00020")
-        # Quadrillage calibré « papier ECG » : 0,2 s × 0,5 mV (grosses cases),
-        # 0,04 s × 0,1 mV (petites cases).
-        ax.xaxis.set_major_locator(MultipleLocator(0.2))
-        ax.xaxis.set_minor_locator(MultipleLocator(0.04))
-        ax.xaxis.set_major_formatter(whole_second)
-        ax.yaxis.set_major_locator(MultipleLocator(0.5))
-        ax.yaxis.set_minor_locator(MultipleLocator(0.1))
-        ax.grid(which="major", color="#f4b6b6", linewidth=0.6)
-        ax.grid(which="minor", color="#f9dada", linewidth=0.3)
+        apply_ecg_paper_grid(ax)
         ax.set_ylabel(name, rotation=0, ha="right", va="center",
                       fontweight="bold")
         ax.margins(x=0)

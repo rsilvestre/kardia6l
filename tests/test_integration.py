@@ -35,8 +35,13 @@ def test_pipeline_end_to_end(tmp_path, simulated):
     assert set(out["leads"]) == {"I", "II", "III", "aVR", "aVL", "aVF"}
 
     # Fichiers produits
-    for fname in ("ecg_6leads.png", "rr_tachogram.png", "ecg_leads.csv", "report.md"):
+    for fname in ("ecg_6leads.png", "rr_tachogram.png", "ecg_leads.csv",
+                  "report.md", "report.pdf"):
         assert os.path.exists(tmp_path / fname), f"manquant : {fname}"
+
+    # Le PDF est un vrai fichier PDF non vide
+    pdf_bytes = (tmp_path / "report.pdf").read_bytes()
+    assert pdf_bytes.startswith(b"%PDF") and len(pdf_bytes) > 1000
 
     # Le rapport contient les sections clés et l'id source
     report = (tmp_path / "report.md").read_text(encoding="utf-8")

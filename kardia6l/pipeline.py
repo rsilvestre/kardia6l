@@ -34,6 +34,7 @@ def run(recording: AtcRecording,
         correct_artifacts: bool = True,
         source_name: str = "ecg",
         write_report: bool = True,
+        write_pdf: bool = True,
         out_dir: str = "output") -> dict:
     """Exécute le pipeline complet sur un AtcRecording. Renvoie un dict de résultats."""
     os.makedirs(out_dir, exist_ok=True)
@@ -96,6 +97,17 @@ def run(recording: AtcRecording,
         )
         outputs["report"] = report_path
         print("Rapport :", report_path)
+
+    # 6) Rapport clinique PDF d'une page (tracé calibré + mesures vs normes).
+    if write_pdf:
+        from .pdf_report import build_pdf
+        pdf_path = build_pdf(
+            recording, result, leads, source_name=source_name,
+            analysis_lead=analysis_lead,
+            out_path=os.path.join(out_dir, "report.pdf"),
+        )
+        outputs["pdf"] = pdf_path
+        print("PDF :", pdf_path)
 
     return outputs
 

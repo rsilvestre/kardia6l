@@ -88,7 +88,9 @@ kardia6l/
     ├── analysis.py            ← R-peaks, FC, R-R, HRV (NeuroKit2)
     ├── plotting.py            ← tracés 6 dérivations + tachogramme R-R
     ├── simulate.py            ← générateur de signal de test (sans .atc)
+    ├── clinical.py            ← plages de référence adultes + classification
     ├── report.py              ← rapport Markdown complet (métadonnées + analyses)
+    ├── pdf_report.py          ← rapport clinique PDF d'une page (tracé + mesures)
     ├── batch.py               ← traitement par lot de data/*.atc (idempotent)
     └── pipeline.py            ← orchestration de bout en bout + CLI
 ```
@@ -105,7 +107,9 @@ mise run clean     # vider output/
 
 Chaque enregistrement produit un dossier **nommé par sa date**
 (`output/2026-06-15_22-46-57/`) contenant : `ecg_6leads.png`, `rr_tachogram.png`,
-`ecg_leads.csv` et **`report.md`** — un rapport complet (id d'origine, UUID,
+`ecg_leads.csv`, **`report.pdf`** (rapport clinique d'une page : tracé calibré +
+mesures FC/axe/PR/QRS/QT/QTc confrontées aux repères adultes, code couleur) et
+**`report.md`** — un rapport complet (id d'origine, UUID,
 appareil/firmware/série/batterie, propriétés du signal, rythme, **recoupement
 de nos pics R avec les battements annotés par l'appareil** (bloc `ann `),
 intervalles P-QRS-T, HRV temporelle/fréquentielle/non linéaire). ⚠️ `data/` et

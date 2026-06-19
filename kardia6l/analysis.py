@@ -215,6 +215,46 @@ def crosscheck_device_beats(detected_idx: np.ndarray,
     }
 
 
+def qtc_fridericia(qt_ms: float, rr_s: float) -> float:
+    """QTc selon Fridericia : QT / RR^(1/3) (QT en ms, RR en s). NaN si invalide."""
+    if not (np.isfinite(qt_ms) and qt_ms > 0 and np.isfinite(rr_s) and rr_s > 0):
+        return float("nan")
+    return qt_ms / (rr_s ** (1.0 / 3.0))
+
+
+def estimate_qrs_axis(leads: dict[str, np.ndarray],
+                      rpeaks_idx: np.ndarray,
+                      sampling_rate: int = SAMPLING_RATE_HZ,
+                      window_ms: float = 50.0) -> float:
+    """
+    Estime l'axe électrique QRS (degrés) à partir des dérivations I et aVF.
+
+    Convention hexaxiale : I à 0°, aVF à +90°. On prend la déflexion nette du
+    QRS (intégrale signée autour de chaque pic R, baseline retirée) comme proxy
+    d'amplitude, puis axe = atan2(net_aVF, net_I).
+
+    NaN si I/aVF absents (ex. enregistrement mono-canal) ou pas de pics R.
+    Best-effort : sensible à la qualité du signal et à la pose pouces du 6L.
+    """
+    rpeaks_idx = np.asarray(rpeaks_idx, dtype=int)
+    if rpeaks_idx.size == 0 or "I" not in leads or "aVF" not in leads:
+        return float("nan")
+    half = max(1, int(window_ms / 1000.0 * sampling_rate))
+
+    def _net_deflection(sig: np.ndarray) -> float:
+        sig = np.asarray(sig, dtype=float)
+        baseline = float(np.median(sig))
+        areas = [float(np.sum(sig[max(0, r - half):min(len(sig), r + half + 1)] - baseline))
+                 for r in rpeaks_idx]
+        return float(np.mean(areas)) if areas else float("nan")
+
+    net_I = _net_deflection(leads["I"])
+    net_aVF = _net_deflection(leads["aVF"])
+    if not (np.isfinite(net_I) and np.isfinite(net_aVF)):
+        return float("nan")
+    return float(np.degrees(np.arctan2(net_aVF, net_I)))
+
+
 def signal_quality(cleaned: np.ndarray,
                    sampling_rate: int = SAMPLING_RATE_HZ) -> float:
     """Indice de qualité moyen du signal (0–1) selon NeuroKit2. NaN si indispo."""

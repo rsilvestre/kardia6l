@@ -6,6 +6,9 @@
 #   mise run all       → tout retraiter (écrase output/)
 #   mise run clean     → vider output/
 
+[tools]
+python = "3.12.13"
+
 [env]
 # Active automatiquement le venv du projet quand on entre dans le dossier
 # (réutilise le .venv existant ; le crée avec le python système si absent).
